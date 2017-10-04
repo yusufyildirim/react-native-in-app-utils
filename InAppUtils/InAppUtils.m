@@ -94,7 +94,7 @@ RCT_EXPORT_METHOD(getPendingPurchases:(RCTResponseSenderBlock)callback)
 
         [transactionsArrayForJS addObject:purchase];
     }
-    callback(@[[NSNull null], transactionsArrayForJS]);
+    callback(@[transactionsArrayForJS]);
 }
 
 RCT_EXPORT_METHOD(purchaseProductForUser:(NSString *)productIdentifier
