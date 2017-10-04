@@ -34,6 +34,7 @@ RCT_EXPORT_MODULE()
             case SKPaymentTransactionStateFailed: {
                 NSString *key = RCTKeyForInstance(transaction.payment.productIdentifier);
                 RCTResponseSenderBlock callback = _callbacks[key];
+                RCTLogWarn(@"updatedTransaction");
                 if (callback) {
                     callback(@[RCTJSErrorFromNSError(transaction.error)]);
                     [_callbacks removeObjectForKey:key];
@@ -48,11 +49,11 @@ RCT_EXPORT_MODULE()
                 RCTResponseSenderBlock callback = _callbacks[key];
                 if (callback) {
                     NSDictionary *purchase = @{
-                                              @"transactionDate": @(transaction.transactionDate.timeIntervalSince1970 * 1000),
-                                              @"transactionIdentifier": transaction.transactionIdentifier,
-                                              @"productIdentifier": transaction.payment.productIdentifier,
-                                              @"transactionReceipt": [[transaction transactionReceipt] base64EncodedStringWithOptions:0]
-                                              };
+                                               @"transactionDate": @(transaction.transactionDate.timeIntervalSince1970 * 1000),
+                                               @"transactionIdentifier": transaction.transactionIdentifier,
+                                               @"productIdentifier": transaction.payment.productIdentifier,
+                                               @"transactionReceipt": [[transaction transactionReceipt] base64EncodedStringWithOptions:0]
+                                               };
                     callback(@[[NSNull null], purchase]);
                     [_callbacks removeObjectForKey:key];
                 } else {
@@ -62,12 +63,15 @@ RCT_EXPORT_MODULE()
             }
             case SKPaymentTransactionStateRestored:
                 [[SKPaymentQueue defaultQueue] finishTransaction:transaction];
+                RCTLogWarn(@"Restored");
                 break;
             case SKPaymentTransactionStatePurchasing:
                 NSLog(@"purchasing");
+                RCTLogWarn(@"Purchasing");
                 break;
             case SKPaymentTransactionStateDeferred:
                 NSLog(@"deferred");
+                RCTLogWarn(@"Deferred");
                 break;
             default:
                 break;
@@ -126,7 +130,7 @@ RCT_EXPORT_METHOD(purchaseProduct:(NSString *)productIdentifier
             break;
         }
     }
-
+    
     if(product) {
         SKMutablePayment *payment = [SKMutablePayment paymentWithProduct:product];
         if(username) {
@@ -183,24 +187,25 @@ restoreCompletedTransactionsFailedWithError:(NSError *)error
 {
     NSString *key = RCTKeyForInstance(@"restoreRequest");
     RCTResponseSenderBlock callback = _callbacks[key];
+    RCTLogWarn(@"paymentQueueRestore");
     if (callback) {
         NSMutableArray *productsArrayForJS = [NSMutableArray array];
         for(SKPaymentTransaction *transaction in queue.transactions){
             if(transaction.transactionState == SKPaymentTransactionStateRestored) {
-
+                
                 NSMutableDictionary *purchase = [NSMutableDictionary dictionaryWithDictionary: @{
-                    @"transactionDate": @(transaction.transactionDate.timeIntervalSince1970 * 1000),
-                    @"transactionIdentifier": transaction.transactionIdentifier,
-                    @"productIdentifier": transaction.payment.productIdentifier,
-                    @"transactionReceipt": [[transaction transactionReceipt] base64EncodedStringWithOptions:0]
-                }];
-
+                                                                                                 @"transactionDate": @(transaction.transactionDate.timeIntervalSince1970 * 1000),
+                                                                                                 @"transactionIdentifier": transaction.transactionIdentifier,
+                                                                                                 @"productIdentifier": transaction.payment.productIdentifier,
+                                                                                                 @"transactionReceipt": [[transaction transactionReceipt] base64EncodedStringWithOptions:0]
+                                                                                                 }];
+                
                 SKPaymentTransaction *originalTransaction = transaction.originalTransaction;
                 if (originalTransaction) {
                     purchase[@"originalTransactionDate"] = @(originalTransaction.transactionDate.timeIntervalSince1970 * 1000);
                     purchase[@"originalTransactionIdentifier"] = originalTransaction.transactionIdentifier;
                 }
-
+                
                 [productsArrayForJS addObject:purchase];
                 [[SKPaymentQueue defaultQueue] finishTransaction:transaction];
             }
@@ -220,7 +225,7 @@ RCT_EXPORT_METHOD(restorePurchases:(RCTResponseSenderBlock)callback)
 }
 
 RCT_EXPORT_METHOD(restorePurchasesForUser:(NSString *)username
-                    callback:(RCTResponseSenderBlock)callback)
+                  callback:(RCTResponseSenderBlock)callback)
 {
     NSString *restoreRequest = @"restoreRequest";
     _callbacks[RCTKeyForInstance(restoreRequest)] = callback;
@@ -252,9 +257,9 @@ RCT_EXPORT_METHOD(receiptData:(RCTResponseSenderBlock)callback)
     NSURL *receiptUrl = [[NSBundle mainBundle] appStoreReceiptURL];
     NSData *receiptData = [NSData dataWithContentsOfURL:receiptUrl];
     if (!receiptData) {
-      callback(@[@"not_available"]);
+        callback(@[@"not_available"]);
     } else {
-      callback(@[[NSNull null], [receiptData base64EncodedStringWithOptions:0]]);
+        callback(@[[NSNull null], [receiptData base64EncodedStringWithOptions:0]]);
     }
 }
 
@@ -292,6 +297,7 @@ RCT_EXPORT_METHOD(receiptData:(RCTResponseSenderBlock)callback)
 - (void)request:(SKRequest *)request didFailWithError:(NSError *)error{
     NSString *key = RCTKeyForInstance(request);
     RCTResponseSenderBlock callback = _callbacks[key];
+    RCTLogWarn(@"didFailWithError");
     if(callback) {
         callback(@[RCTJSErrorFromNSError(error)]);
         [_callbacks removeObjectForKey:key];
@@ -309,7 +315,7 @@ static NSString *RCTKeyForInstance(id instance)
 {
     return [NSString stringWithFormat:@"%p", instance];
 }
-    
+
 static NSString *StringForTransactionState(SKPaymentTransactionState state)
 {
     switch(state) {
